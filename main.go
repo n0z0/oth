@@ -240,9 +240,13 @@ func processHTML(htmlContent string, sourceURL string) (string, []string) {
 
 // insertPendingURL memasukkan URL ke DB jika belum ada
 func insertPendingURL(targetURL string) {
-	// Abaikan file statis untuk menghemat resource
-	if strings.HasSuffix(targetURL, ".jpg") || strings.HasSuffix(targetURL, ".png") || strings.HasSuffix(targetURL, ".css") {
-		return
+	// Abaikan file statis dan dokumen biner untuk menghemat resource
+	targetLower := strings.ToLower(targetURL)
+	ignoreExts := []string{".jpg", ".jpeg", ".png", ".gif", ".css", ".pdf", ".zip", ".rar", ".mp3", ".mp4", ".avi", ".exe", ".gz", ".tar"}
+	for _, ext := range ignoreExts {
+		if strings.HasSuffix(targetLower, ext) {
+			return
+		}
 	}
 
 	doc := OnionData{
