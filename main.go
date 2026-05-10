@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -25,7 +26,7 @@ const (
 	DatabaseName   = "osint_tor"
 	CollectionName = "onion_sites"
 	TorProxyURL    = "127.0.0.1:9150" // Port Tor telah diubah ke 9150
-	NumWorkers     = 5                // Jumlah goroutines paralel (sesuaikan dengan kemampuan jaringan/RAM)
+	NumWorkers     = 20               // Jumlah goroutines paralel (sesuaikan dengan kemampuan jaringan/RAM)
 	RequestTimeout = 60 * time.Second // Tor sangat lambat, butuh timeout panjang
 )
 
@@ -54,6 +55,13 @@ func main() {
 
 	db = client.Database(DatabaseName).Collection(CollectionName)
 	fmt.Println("Berhasil terhubung ke MongoDB!")
+
+	// Cek koneksi ke Tor Proxy sebelum memulai crawler
+	fmt.Printf("Mengecek koneksi ke Tor Proxy di %s...\n", TorProxyURL)
+	if err := checkTorProxy(); err != nil {
+		log.Fatalf("Tor Proxy tidak aktif di %s.\nError: %v\nSilakan nyalakan Tor terlebih dahulu sebelum menjalankan crawler!", TorProxyURL, err)
+	}
+	fmt.Println("Tor Proxy terdeteksi aktif!")
 
 	// Buat index URL agar tidak ada duplikasi data
 	createIndex()
@@ -111,6 +119,16 @@ func main() {
 	}
 
 	// wg.Wait() // Dalam kasus ini loop berjalan selamanya
+}
+
+// checkTorProxy memastikan port SOCKS5 Tor terbuka dan siap menerima koneksi
+func checkTorProxy() error {
+	conn, err := net.DialTimeout("tcp", TorProxyURL, 3*time.Second)
+	if err != nil {
+		return err
+	}
+	conn.Close()
+	return nil
 }
 
 // worker adalah goroutine yang melakukan HTTP Request lewat Tor
