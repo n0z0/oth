@@ -147,6 +147,22 @@ func worker(id int, jobs <-chan string, wg *sync.WaitGroup) {
 	}
 
 	for urlTarget := range jobs {
+		// Validasi tambahan untuk mempercepat pembersihan sisa antrean file biner dari database lama
+		targetLower := strings.ToLower(urlTarget)
+		ignoreExts := []string{".jpg", ".jpeg", ".png", ".gif", ".css", ".pdf", ".zip", ".rar", ".mp3", ".mp4", ".avi", ".exe", ".gz", ".tar"}
+		shouldSkip := false
+		for _, ext := range ignoreExts {
+			if strings.HasSuffix(targetLower, ext) {
+				shouldSkip = true
+				break
+			}
+		}
+		if shouldSkip {
+			fmt.Printf("Worker %d melewati file biner dari antrean lama: %s\n", id, urlTarget)
+			markError(urlTarget, "Diabaikan karena ekstensi file biner/statis")
+			continue
+		}
+
 		fmt.Printf("Worker %d memproses: %s\n", id, urlTarget)
 
 		// 1. Fetch HTML
